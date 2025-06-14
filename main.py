@@ -12,6 +12,14 @@ import os
 app = FastAPI()
 
 CSV_PATH = "./40stocks.csv"
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or restrict to ["http://localhost:3000"] etc.
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def load_tickers():
     with open("40stocks.csv", "r") as f:
@@ -42,6 +50,7 @@ def get_smas_from_adj_close(ticker, periods=[200, 50, 20]):
         for p in periods:
             if len(adj_close_trunc) >= p:
                 sma_value = adj_close_trunc.tail(p).mean()
+                sma_value = sma_value.iloc[0]
                 sma_results[f'sma_{p}'] = round(sma_value, 4)
             else:
                 sma_results[f'sma_{p}'] = None
@@ -76,7 +85,6 @@ def check_sell_signal(data):
 @app.get("/sma/all")
 def get_all_smas():
     tickers = load_tickers()
-    print(tickers)
     results = []
 
     for ticker in tickers:
@@ -85,13 +93,13 @@ def get_all_smas():
         if not data:
             continue
 
-        signal = check_buy_signal(data) or check_sell_signal(data) or "NO SIGNAL"
+        signal = check_buy_signal(data) or check_sell_signal(data) or "NO_SIGNAL"
         results.append({
             "ticker": ticker,
             "last_closing_price": data["close"],
-            "sma_20": data["sma_20"][NSE_ticker],
-            "sma_50": data["sma_50"][NSE_ticker],
-            "sma_200": data["sma_200"][NSE_ticker],
+            "sma_20": data["sma_20"],
+            "sma_50": data["sma_50"],
+            "sma_200": data["sma_200"],
             "signal": signal
         })
 
