@@ -80,17 +80,18 @@ def get_all_smas():
     results = []
 
     for ticker in tickers:
-        data = get_smas_from_adj_close(ticker+'.NS')
+        NSE_ticker = ticker+'.NS'
+        data = get_smas_from_adj_close(NSE_ticker)
         if not data:
             continue
 
         signal = check_buy_signal(data) or check_sell_signal(data) or "NO SIGNAL"
         results.append({
-            "ticker": data["ticker"],
+            "ticker": ticker,
             "last_closing_price": data["close"],
-            "sma_20": data["sma_20"],
-            "sma_50": data["sma_50"],
-            "sma_200": data["sma_200"],
+            "sma_20": data["sma_20"][NSE_ticker],
+            "sma_50": data["sma_50"][NSE_ticker],
+            "sma_200": data["sma_200"][NSE_ticker],
             "signal": signal
         })
 
