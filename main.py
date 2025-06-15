@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import os
 from fastapi.responses import JSONResponse
-
+import datetime
 app = FastAPI()
 
 CSV_PATH = "./40stocks.csv"
@@ -91,13 +91,13 @@ async def ping():
 def get_all_smas():
     tickers = load_tickers()
     results = []
-
+    count=0
     for ticker in tickers:
         NSE_ticker = ticker+'.NS'
         data = get_smas_from_adj_close(NSE_ticker)
         if not data:
             continue
-
+        count+=1
         signal = check_buy_signal(data) or check_sell_signal(data) or "NO_SIGNAL"
         results.append({
             "ticker": ticker,
@@ -105,7 +105,7 @@ def get_all_smas():
             "sma_20": data["sma_20"],
             "sma_50": data["sma_50"],
             "sma_200": data["sma_200"],
-            "signal": signal
+            "signal": signal,
         })
 
-    return results
+    return {'results':results,'last_updated_time':datetime.datetime.now()}
