@@ -119,6 +119,9 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import datetime
+from typing import List, Optional
+from pydantic import BaseModel
+from fastapi import Body
 
 app = FastAPI()
 
@@ -223,3 +226,61 @@ def get_all_smas():
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+class ResearchInput(BaseModel):
+    ticker: str
+    buyPrice: float
+    targetPrice: float
+    reportDate: str  # Example format: "01/01/24"
+
+
+@app.post("/research-stock")
+def research_stock(inputs: List[ResearchInput] = Body(...)):
+    results = []
+
+    for item in inputs:
+        ticker = item.ticker + ".NS"
+        try:
+            # Format report date to datetime
+            report_date = datetime.datetime.strptime(item.reportDate, "%d/%m/%Y")
+
+            # Fetch data from report date till today
+            df = yf.download(ticker, start=report_date.strftime('%Y-%m-%d'), auto_adjust=False, progress=False)
+
+            if df.empty or 'Adj Close' not in df.columns:
+                raise Exception("No data available for given ticker or date range")
+
+            current_price = df['Adj Close'].dropna().iloc[-1]
+            adjCurrentPrice = round(float(current_price), 2)
+
+            actualOpportunity = ((item.targetPrice - item.buyPrice) / item.buyPrice) * 100
+            currentOpportunity = ((item.targetPrice - adjCurrentPrice) / adjCurrentPrice) * 100
+            opportunityVariation = ((adjCurrentPrice - item.buyPrice) / item.buyPrice) * 100
+
+            # ✅ Find the first date when High >= targetPrice
+            target_touch_date = None
+            filtered = df[('High',ticker)]
+            highs = df[filtered >= float(item.targetPrice)]
+            if not highs.empty:
+                target_touch_date = highs.index[0].strftime("%d-%m-%Y")
+
+            results.append({
+                "ticker": item.ticker,
+                "current_price": adjCurrentPrice,
+                "actual_opportunity": round(float(actualOpportunity), 2),
+                "current_opportunity": round(float(currentOpportunity), 2),
+                "opportunity_variation": round(float(opportunityVariation), 2),
+                "buy_price":item.buyPrice,
+                "target_price":item.targetPrice,
+                "report_date":item.reportDate,
+                "target_price_hit_date": target_touch_date if target_touch_date else "Not Yet"  # None if never hit
+            })
+
+        except Exception as e:
+            results.append({
+                "ticker": item.ticker,
+                "error": str(e),
+            })
+
+    return results
