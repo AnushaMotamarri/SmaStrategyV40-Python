@@ -81,6 +81,10 @@ def check_sell_signal(data):
     if None in [close, s20, s50, s200]:
         return None
     return "SELL" if close >= s20 >= s50 >= s200 else None
+    
+@app.get("/ping")
+def ping():
+    return {"status": "ok"}
 
 @app.get("/sma/all")
 def get_all_smas():
