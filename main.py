@@ -8,6 +8,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import os
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
@@ -81,10 +82,10 @@ def check_sell_signal(data):
     if None in [close, s20, s50, s200]:
         return None
     return "SELL" if close >= s20 >= s50 >= s200 else None
-    
-@app.get("/ping")
-def ping():
-    return {"status": "ok"}
+
+@app.api_route("/ping", methods=["GET", "POST", "HEAD"])
+async def ping():
+    return JSONResponse(content={"status": "ok"})
 
 @app.get("/sma/all")
 def get_all_smas():
